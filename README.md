@@ -40,21 +40,31 @@ Système multi-agents d'analyse de conformité contractuelle internationale, ave
 ## Prérequis
 
 - Docker et Docker Compose
-- Clé API Groq gratuite (https://console.groq.com)
+- Clé API Groq gratuite — créer un compte sur https://console.groq.com puis générer une clé dans **API Keys**
 
 ## Installation et lancement
 
 1. **Cloner le projet**
 ```bash
-git clone <repo-url>
-cd projet_ia_cloud
+git clone https://github.com/AmineHim/Ia_in_Cloud.git
+cd Ia_in_Cloud
 ```
 
 2. **Configurer l'environnement**
 ```bash
 cp .env.example .env
-# Editer .env et ajouter votre clé GROQ_API_KEY
 ```
+
+Éditer `.env` et renseigner les variables suivantes :
+
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `GROQ_API_KEY` | Clé API Groq (obligatoire) — obtenir sur https://console.groq.com | `gsk_xxx...` |
+| `STREAMLIT_PASSWORD` | Mot de passe pour accéder à l'interface web | `conformite2026` |
+| `N8N_BASIC_AUTH_USER` | Identifiant admin n8n | `admin` |
+| `N8N_BASIC_AUTH_PASSWORD` | Mot de passe admin n8n | `admin123` |
+
+> **Note** : le fichier `.env` ne doit jamais être commité. Il est déjà dans `.gitignore`.
 
 3. **Lancer les services**
 ```bash

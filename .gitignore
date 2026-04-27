@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+data/chroma_db/
+.DS_Store
+logs/*.json
+logs/*.db
+node_modules/
+.n8n/
+*.egg-info/
+dist/
+build/

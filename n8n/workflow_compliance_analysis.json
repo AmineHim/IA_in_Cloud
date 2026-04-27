@@ -1,0 +1,148 @@
+{
+  "name": "Compliance Contract Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyze-contract",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/analyze",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ query: $json.body.query, contract_name: $json.body.contract_name || null }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "call-backend-analysis",
+      "name": "1. Call Analysis API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\n\n// Extract risk level from validation\nconst validationText = result.validation || '';\nlet riskLevel = 'INDÉTERMINÉ';\nif (validationText.includes('CRITIQUE')) riskLevel = 'CRITIQUE';\nelse if (validationText.includes('ÉLEVÉ')) riskLevel = 'ÉLEVÉ';\nelse if (validationText.includes('MOYEN')) riskLevel = 'MOYEN';\nelse if (validationText.includes('FAIBLE')) riskLevel = 'FAIBLE';\n\nreturn [{\n  json: {\n    session_id: result.session_id,\n    response: result.response,\n    legal_analysis: result.legal_analysis,\n    validation: result.validation,\n    sources: result.sources,\n    risk_level: riskLevel,\n    timestamp: new Date().toISOString(),\n    status: 'completed'\n  }\n}];"
+      },
+      "id": "process-result",
+      "name": "2. Process & Extract Risk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "risk-check",
+              "leftValue": "={{ $json.risk_level }}",
+              "rightValue": "CRITIQUE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "risk-router",
+      "name": "3. Risk Level Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{\n  json: {\n    ...data,\n    alert: true,\n    alert_message: `ALERTE CRITIQUE: Non-conformité critique détectée dans la session ${data.session_id}. Action immédiate requise.`\n  }\n}];"
+      },
+      "id": "critical-alert",
+      "name": "4a. Critical Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn [{\n  json: {\n    ...data,\n    alert: false,\n    alert_message: null\n  }\n}];"
+      },
+      "id": "normal-flow",
+      "name": "4b. Normal Flow",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "webhook-response",
+      "name": "5. Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1440, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{"node": "1. Call Analysis API", "type": "main", "index": 0}]
+      ]
+    },
+    "1. Call Analysis API": {
+      "main": [
+        [{"node": "2. Process & Extract Risk", "type": "main", "index": 0}]
+      ]
+    },
+    "2. Process & Extract Risk": {
+      "main": [
+        [{"node": "3. Risk Level Check", "type": "main", "index": 0}]
+      ]
+    },
+    "3. Risk Level Check": {
+      "main": [
+        [{"node": "4a. Critical Alert", "type": "main", "index": 0}],
+        [{"node": "4b. Normal Flow", "type": "main", "index": 0}]
+      ]
+    },
+    "4a. Critical Alert": {
+      "main": [
+        [{"node": "5. Send Response", "type": "main", "index": 0}]
+      ]
+    },
+    "4b. Normal Flow": {
+      "main": [
+        [{"node": "5. Send Response", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "compliance",
+      "id": "1"
+    }
+  ]
+}
